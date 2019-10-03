@@ -29,9 +29,9 @@ def train_on_batch(
     model.zero_grad()
 
     loss = model.loss(batch_of_x, batch_of_y)
-    
+
     loss.backward()
-    
+
     optimizer.step()
 
     return
@@ -97,7 +97,13 @@ def trainer(model,
     return
 
 
-def draw_samples_grid_vae(model, num_row=15, num_colum = 15, images_size=(28, 28)):
+def draw_samples_grid_vae(
+    model,
+    num_row=15,
+    num_colum=15,
+    images_size=(
+        28,
+        28)):
     """
     Illustrate how change digits x where change point in latent space z.
     Input: model,                                          - model VAE or IWAE.
@@ -114,11 +120,11 @@ def draw_samples_grid_vae(model, num_row=15, num_colum = 15, images_size=(28, 28
         for j, x_i in enumerate(grid_y):
             z_sample = np.array([[x_i, y_i]])
 
-            x_sample = model.q_x(torch.from_numpy(z_sample).float()).view(images_size).cpu().data.numpy()
-            
+            x_sample = model.q_x(torch.from_numpy(z_sample).float()).view(
+                images_size).cpu().data.numpy()
+
             image = x_sample
             figure[i * images_size[0]: (i + 1) * images_size[0],
                    j * images_size[1]: (j + 1) * images_size[1]] = image
 
     return figure
-

@@ -82,10 +82,11 @@ class VAE(nn.Module):
 
         bias = mu.view([batch_size, 1, self.latent_dim])
 
-        epsilon = torch.randn([batch_size, num_samples, self.latent_dim], requires_grad=True)
+        epsilon = torch.randn(
+            [batch_size, num_samples, self.latent_dim], requires_grad=True)
         scale = sigma.view([batch_size, 1, self.latent_dim])
 
-        return bias + epsilon*scale
+        return bias + epsilon * scale
 
     def q_x(self, z):
         """
@@ -113,11 +114,14 @@ class VAE(nn.Module):
 
         x_distr = self.q_x(self.sample_z(propos_distr))
 
-        expectation = torch.mean(self.log_mean_exp(self.log_likelihood(batch_x, x_distr)), dim=0) 
+        expectation = torch.mean(
+            self.log_mean_exp(
+                self.log_likelihood(
+                    batch_x, x_distr)), dim=0)
 
         divergence = self.divergence_KL_normal(propos_distr, pri_distr)
 
-        return -1*torch.mean(expectation - divergence, dim=0)
+        return -1 * torch.mean(expectation - divergence, dim=0)
 
     def generate_samples(self, num_samples):
         """
@@ -168,8 +172,10 @@ class VAE(nn.Module):
         batch_size = x_distr.shape[0]
         input_dim = x_distr.shape[2]
 
-        bernoulli_log_likelihood = torch.log(x_distr) * x_true.view([batch_size, 1, input_dim])
-        bernoulli_log_likelihood += torch.log(1 - x_distr) * (1 - x_true).view([batch_size, 1, input_dim])
+        bernoulli_log_likelihood = torch.log(
+            x_distr) * x_true.view([batch_size, 1, input_dim])
+        bernoulli_log_likelihood += torch.log(1 - x_distr) * (
+            1 - x_true).view([batch_size, 1, input_dim])
 
         return torch.sum(bernoulli_log_likelihood, dim=2)
 
@@ -209,7 +215,13 @@ class VAE(nn.Module):
 
 
 class IWAE(VAE):
-    def __init__(self, latent_dim, input_dim, K=2, hidden_dim=200, device='cpu'):
+    def __init__(
+            self,
+            latent_dim,
+            input_dim,
+            K=2,
+            hidden_dim=200,
+            device='cpu'):
         """
         Standart model of IWAE.
         Input: latent_dim,     int     - the dimension of latent space.
@@ -243,8 +255,9 @@ class IWAE(VAE):
         normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
         normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
-        exponent = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
+        exponent = log_likelihood_true_distr + \
+            normal_log_pdf_prior - normal_log_pdf_propos
 
         expectetion = torch.mean(self.log_mean_exp(exponent), dim=0)
 
-        return -1*torch.mean(expectetion, dim=0)
+        return -1 * torch.mean(expectetion, dim=0)
