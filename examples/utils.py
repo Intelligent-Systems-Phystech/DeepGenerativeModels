@@ -14,17 +14,16 @@ from matplotlib import pyplot as plt
 # Additional function for training
 
 
-def train_on_batch(
-        model,
-        batch_of_x,
-        batch_of_y,
-        optimizer):
+def train_on_batch(model,
+			       batch_of_x,
+			       batch_of_y,
+			       optimizer):
     """
     Function for optimize model parameters by using one batch.
     Input: model,                    - training model.
-    Input: batch_of_x,   FloatTensor - the matrix of shape n x D.
-    Input: batch_of_y,   FloatTensor - the matrix of shape n x ?.
-    Input: optimizer,    Optimimazer - optimizer from torch.optim.
+    Input: batch_of_x,   FloatTensor - the matrix of shape batch_size x input_dim.
+    Input: batch_of_y,   FloatTensor - the matrix of shape batch_size x ?.
+    Input: optimizer,    Optimimizer - optimizer from torch.optim.
     """
     model.zero_grad()
 
@@ -37,16 +36,15 @@ def train_on_batch(
     return
 
 
-def train_epoch(
-        train_generator,
-        model,
-        optimizer,
-        callback=None):
+def train_epoch(model,
+	        	train_generator,
+	        	optimizer,
+	        	callback=None):
     """
     Function for optimize model parameters by using all Dataset.
     Input: train_generator, DataLoader  - generator of samples from all Dataset.
     Input: model,                       - training model.
-    Input: optimizer,       Optimimazer - optimizer from torch.optim.
+    Input: optimizer,       Optimimizer - optimizer from torch.optim.
     Input: callback,        <function>  - function wich call after each epoch.
     """
     model.train()
@@ -68,7 +66,7 @@ def trainer(model,
     """
     Function for optimize model parameters by using all Dataset count_of_epoch times.
     Input: model,                         - training model.
-    Input: optimizer,       Optimimazer   - optimizer from torch.optim.
+    Input: optimizer,       Optimimizer   - optimizer from torch.optim.
     Input: dataset,         TensorDataset - train dataset.
     Input: count_of_epoch,  int           - a number of epoch.
     Input: batch_size,      int           - the size of batch.
@@ -89,21 +87,18 @@ def trainer(model,
             pin_memory=True)
 
         train_epoch(
+        	model=model,
             train_generator=batch_generator,
-            model=model,
             optimizer=optimizer,
             callback=callback)
 
     return
 
 
-def draw_samples_grid_vae(
-    model,
-    num_row=15,
-    num_colum=15,
-    images_size=(
-        28,
-        28)):
+def draw_samples_grid_vae(model,
+    					  num_row=15,
+    					  num_colum=15,
+    					  images_size=(28, 28)):
     """
     Illustrate how change digits x where change point in latent space z.
     Input: model,                                          - model VAE or IWAE.

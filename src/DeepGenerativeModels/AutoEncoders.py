@@ -11,7 +11,7 @@ class VAE(nn.Module):
     def __init__(self, latent_dim, input_dim, hidden_dim=200, device='cpu'):
         """
         Standart model of VAE with ELBO optimization.
-        Input: d,           int     - the dimension of latent space.
+        Input: latent_dim,  int     - the dimension of latent space.
         Input: input_dim,   int     - the dimension of input space.
         Input: device,      string  - the type of computing device: 'cpu' or 'gpu'.
         Input: hidden_dim,  int     - the size of hidden_dim neural layer.
@@ -130,7 +130,7 @@ class VAE(nn.Module):
 
         Return: Tensor - the matrix of shape num_samples x input_dim.
         """
-        distr_z = self.p_z(1)
+        distr_z = self.p_z(num_samples=1)
 
         z = self.sample_z(distr, num_samples=num_samples)
 
@@ -258,6 +258,6 @@ class IWAE(VAE):
         exponent = log_likelihood_true_distr + \
             normal_log_pdf_prior - normal_log_pdf_propos
 
-        expectetion = torch.mean(self.log_mean_exp(exponent), dim=0)
+        expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
 
-        return -1 * torch.mean(expectetion, dim=0)
+        return -1 * torch.mean(expectation, dim=0)
