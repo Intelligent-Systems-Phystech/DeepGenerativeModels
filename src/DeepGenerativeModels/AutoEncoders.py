@@ -183,8 +183,8 @@ class VAE(nn.Module):
 
         return torch.sum(bernoulli_log_likelihood, dim=2)
 
-    @staticmethod
-    def log_mean_exp(data):
+
+    def log_mean_exp(self, data):
         """
         Input: data, Tensor - the tensor of shape n_1 x n_2 x ... x n_K.
 
