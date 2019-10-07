@@ -61,8 +61,8 @@ class VAE(nn.Module):
             mu,    Tensor - the matrix of shape num_samples x latent_dim.
             sigma, Tensor - the matrix of shape num_samples x latent_dim.
         """
-        mu = torch.zeros([num_samples, self.latent_dim])
-        sigma = torch.ones([num_samples, self.latent_dim])
+        mu = torch.zeros([num_samples, self.latent_dim], device=self.device)
+        sigma = torch.ones([num_samples, self.latent_dim], device=self.device)
         return mu, sigma
 
     def sample_z(self, distr, num_samples=1):
@@ -82,8 +82,9 @@ class VAE(nn.Module):
 
         bias = mu.view([batch_size, 1, self.latent_dim])
 
-        epsilon = torch.randn(
-            [batch_size, num_samples, self.latent_dim], requires_grad=True)
+        epsilon = torch.randn([batch_size, num_samples, self.latent_dim], 
+                                requires_grad=True, 
+                                device=self.device)
         scale = sigma.view([batch_size, 1, self.latent_dim])
 
         return bias + epsilon * scale
@@ -139,7 +140,7 @@ class VAE(nn.Module):
 
         distr_x = self.q_x(z).view([num_samples, -1])
 
-        return torch.bernoulli(distr_x)
+        return torch.bernoulli(distr_x, device = self.device)
 
     @staticmethod
     def log_pdf_normal(distr, samples):
