@@ -236,10 +236,44 @@ class IWAE(VAE):
 
         self.to(device)
 
+    def posterior_z(self, z, x):
+        """
+        Return margin distribution of Z
+        Input: x, FloatTensor - the matrix of shape 1 x input_dim.
+        Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
+        
+        Return: FloatTensor - matrix of shape 1 x batch_size_x.
+        """
+
+        propos_distr = self.q_z(x)
+        pri_distr = self.p_z(x.shape[0])
+        
+        z_latent = self.sample_z(propos_distr, self.K)
+        z_latent[:, 0, :] = z
+
+        x_distr = self.q_x(z_latent)
+
+        log_likelihood_true_distr = self.log_likelihood(x, x_distr)
+        log_likelihood_true_distr_i = log_likelihood_true_distr[:, :1]
+
+        normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
+        normal_log_pdf_prior_i = normal_log_pdf_prior[:, :1]
+
+        normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
+
+        exponent = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
+
+        expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
+
+        proba = torch.exp(torch.mean(log_likelihood_true_distr_i + normal_log_pdf_prior_i)-torch.mean(expectation, dim=0))
+
+        return proba
+
+
     def loss(self, batch_x, batch_y):
         """
         Calculate k-sample lower bound approximation of log likelihood for given batch with negative sign.
-        Input: batch_x, FloatTensor - the matrix of shape n x D.
+        Input: batch_x, FloatTensor - the matrix of shape batch_size x input_dim.
         Input: batch_y, FloatTensor - dont uses parameter in this model.
 
         Return: Tensor - scalar, k-sample lower bound approximation of log likelihood for given batch with negative sign.
@@ -247,11 +281,10 @@ class IWAE(VAE):
         propos_distr = self.q_z(batch_x)
         pri_distr = self.p_z(batch_x.shape[0])
 
-        x_true = batch_x
         z_latent = self.sample_z(propos_distr, num_samples=self.K)
         x_distr = self.q_x(z_latent)
 
-        log_likelihood_true_distr = self.log_likelihood(x_true, x_distr)
+        log_likelihood_true_distr = self.log_likelihood(batch_x, x_distr)
         normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
         normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
@@ -261,3 +294,8 @@ class IWAE(VAE):
         expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
 
         return -1 * torch.mean(expectation, dim=0)
+
+
+
+
+
