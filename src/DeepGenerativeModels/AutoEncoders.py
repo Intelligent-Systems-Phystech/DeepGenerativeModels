@@ -191,7 +191,7 @@ class VAE(nn.Module):
         Return: Tensor - the tensor of shape n_1 x n_2 x ,,, x n_{K - 1}.
         """
         return torch.logsumexp(data, dim=-1) - \
-            torch.log(torch.Tensor([data.shape[-1]]))
+            torch.log(torch.Tensor([data.shape[-1]], device=self.device))
 
     @staticmethod
     def divergence_KL_normal(q_distr, p_distr):
