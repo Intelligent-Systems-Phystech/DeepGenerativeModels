@@ -107,6 +107,9 @@ class VAE(nn.Module):
 
         Return: Tensor - scalar, ELBO approximation of log likelihood for given batch with negative sign.
         """
+        batch_x = batch_x.to(self.device)
+        batch_y = batch_y.to(self.device)
+
         batch_size = batch_x.shape[0]
 
         propos_distr = self.q_z(batch_x)
@@ -244,6 +247,8 @@ class IWAE(VAE):
         
         Return: FloatTensor - matrix of shape 1 x batch_size_x.
         """
+        z = z.to(self.device)
+        x = x.to(self.device)
 
         propos_distr = self.q_z(x)
         pri_distr = self.p_z(x.shape[0])
@@ -278,6 +283,9 @@ class IWAE(VAE):
 
         Return: Tensor - scalar, k-sample lower bound approximation of log likelihood for given batch with negative sign.
         """
+        batch_x = batch_x.to(self.device)
+        batch_y = batch_y.to(self.device)
+
         propos_distr = self.q_z(batch_x)
         pri_distr = self.p_z(batch_x.shape[0])
 
