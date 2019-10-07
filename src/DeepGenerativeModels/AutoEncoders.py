@@ -47,6 +47,8 @@ class VAE(nn.Module):
             mu,    Tensor - the matrix of shape batch_size x latent_dim.
             sigma, Tensor - the matrix of shape batch_size x latent_dim.
         """
+        x = x.to(self.device)
+
         proposal = self.proposal_z(x)
         mu = self.proposal_mu(proposal)
         sigma = torch.nn.Softplus()(self.proposal_sigma(proposal))
@@ -77,6 +79,8 @@ class VAE(nn.Module):
         Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
         """
         mu, sigma = distr
+        mu = mu.to(self.device)
+        sigma = sigma.to(self.device)
 
         batch_size = mu.shape[0]
 
@@ -96,6 +100,7 @@ class VAE(nn.Module):
 
         Return: Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
         """
+        z = z.to(self.device)
         out = self.generative_network(z)
 
         return torch.clamp(out, 0.01, 0.99)
@@ -154,6 +159,7 @@ class VAE(nn.Module):
         Return: Tensor - the matrix of shape batch_size x num_samples, each element of which is the logarithm of the probability density of a point relative to the corresponding distribution.
         """
         mu, sigma = distr
+
         batch_size = mu.shape[0]
         latent_dim = mu.shape[1]
 
@@ -183,15 +189,16 @@ class VAE(nn.Module):
 
         return torch.sum(bernoulli_log_likelihood, dim=2)
 
-
+    @staticmethod
     def log_mean_exp(self, data):
         """
         Input: data, Tensor - the tensor of shape n_1 x n_2 x ... x n_K.
 
         Return: Tensor - the tensor of shape n_1 x n_2 x ,,, x n_{K - 1}.
         """
+
         return torch.logsumexp(data, dim=-1) - \
-            torch.log(torch.Tensor([data.shape[-1]]).to(self.device))
+            torch.log(torch.Tensor([data.shape[-1]]).to(data.device))
 
     @staticmethod
     def divergence_KL_normal(q_distr, p_distr):
