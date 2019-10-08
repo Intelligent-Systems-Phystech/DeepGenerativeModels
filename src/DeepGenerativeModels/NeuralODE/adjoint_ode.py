@@ -21,7 +21,8 @@ class AdjointODE(nn.Module):
         self.timestamps = timestamps
         self.ode_model = ode_model
         self.time_intervals = timestamps[1:] - timestamps[:-1]
-        self.ode_solver = ode_solver
+        if ode_solver == 'euler_step':
+            self.ode_solver = euler_step
 
     def forward_dynamics(self, state):
         return [1.0, self.ode_model(state)]
