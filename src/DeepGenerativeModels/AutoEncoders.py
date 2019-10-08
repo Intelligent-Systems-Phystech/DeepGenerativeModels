@@ -311,7 +311,7 @@ class IWAE(VAE):
 
         cat = torch.distributions.Categorical(weight)
         
-        indexes = cat.sample_n(1)
+        indexes = cat.sample((1,))
 
         return z_latent[:, indexes, :][0][0]
 
