@@ -9,8 +9,6 @@ from torch import optim
 from scipy.stats import norm
 import numpy as np
 
-from matplotlib import pyplot as plt
-
 # Additional function for training
 
 
@@ -105,6 +103,8 @@ def draw_samples_grid_vae(model,
     Input: num_row,                        int             - the number of row.
     Input: num_colum,                      int             - the number of column.
     Input: images_size = (x_size, y_size), tuple(int, int) - a size of input image.
+
+    Return: figure,                        float           - the picture
     """
 
     grid_x = norm.ppf(np.linspace(0.05, 0.95, num_colum))
@@ -123,3 +123,47 @@ def draw_samples_grid_vae(model,
                    j * images_size[1]: (j + 1) * images_size[1]] = image
 
     return figure
+
+
+def draw_reconstucted_samples(model, batch_x, num_samples=15, images_size=(28, 28), IW_sampler = True):
+    """
+    Illustrate how change digits x where change point in latent space z.
+    Input: model,                                          - model VAE or IWAE.
+    Input: batch_x,                        Tensor          - the tensor of shape batch_size x input_dim.
+    Input: num_samples,                    int             - the number of sampled values for each image.
+    Input: images_size = (x_size, y_size), tuple(int, int) - a size of input image.
+    Input: IW_sampler,					   bool            - the flag: use Importance sampling or q_z
+    
+    Return: figure,                        float           - the picture
+    """
+    num_row = batch_x.shape[0]
+    
+    figure = np.zeros((images_size[0] * num_row, images_size[1] * (num_samples + 2)))
+        
+    for i, x in enumerate(batch_x):
+        x = x.view([1, -1])
+        image = x.view((28, 28)).cpu().data.numpy()
+
+        # draw real image
+        j = 0
+        figure[i * images_size[0]: (i + 1) * images_size[0],
+               j * images_size[1]: (j + 1) * images_size[1]] = image
+        # draw saparator betwean real and generate image
+        j = 1
+        figure[i * images_size[0]: (i + 1) * images_size[0],
+               j * images_size[1]: (j + 1) * images_size[1]] = 1
+
+        for j in range(2, num_samples + 2):
+            if IW_sampler == True:
+                z = model.sample_z_IW(x)
+            else: 
+                distr = model.q_z(x)
+                z = model.sample_z(distr)
+            x_sample = model.q_x(z).view((28, 28)).cpu().data.numpy()
+
+            image = x_sample
+            figure[i * images_size[0]: (i + 1) * images_size[0],
+                   j * images_size[1]: (j + 1) * images_size[1]] = image
+
+    return figure
+    
