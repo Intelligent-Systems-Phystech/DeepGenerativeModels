@@ -250,10 +250,10 @@ class IWAE(VAE):
     def q_IW(self, z, x):
         """
         Return density value for sample z for q_IW(z|x).
-        Input: x, FloatTensor - the matrix of shape 1 x input_dim.
+        Input: x, FloatTensor - the matrix of shape batch_size_x x input_dim.
         Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
         
-        Return: FloatTensor - matrix of shape 1 x batch_size_x.
+        Return: FloatTensor - matrix of shape batch_size_x x 1.
         """
         z = z.to(self.device)
         x = x.to(self.device)
@@ -264,23 +264,23 @@ class IWAE(VAE):
         z_latent = self.sample_z(propos_distr, self.K)
         z_latent[:, 0, :] = z
 
-        x_distr = self.q_x(z_latent)
+        x_distr = model.q_x(z_latent)
 
-        log_likelihood_true_distr = self.log_likelihood(x, x_distr)
-        log_likelihood_true_distr_i = log_likelihood_true_distr[:, :1]
+        log_likelihood_true_distr = model.log_likelihood(batch_x, x_distr)
 
-        normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
-        normal_log_pdf_prior_i = normal_log_pdf_prior[:, :1]
+        normal_log_pdf_prior = model.log_pdf_normal(pri_distr, z_latent)
 
-        normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
+        normal_log_pdf_propos = model.log_pdf_normal(propos_distr, z_latent)
 
         exponent = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
+
+        expectation = model.log_mean_exp(exponent)
+
+        log_weight = log_likelihood_true_distr + normal_log_pdf_prior - expectation.view(-1, 1)
         
-        expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
-
-        proba = torch.exp(torch.mean(log_likelihood_true_distr_i + normal_log_pdf_prior_i)-torch.mean(expectation, dim=0))
-
-        return proba
+        proba = torch.exp(log_weight)
+        
+        return proba[:, :1]
 
     def sample_z_IW(self, distr, num_samples=1):
         """
