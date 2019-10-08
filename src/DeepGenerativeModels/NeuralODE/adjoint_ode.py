@@ -43,11 +43,12 @@ class AdjointODE(nn.Module):
             states.append(state[1])
         return states
 
-    def backward(self, outputs):
+    def backward(self, outputs, output_gradients=None):
 
         grad_weights = [torch.zeros_like(w) for w in self.ode_model.parameters()]
         t0 = self.timestamps[-1]
-        output_gradients = torch.zeros_like(outputs)
+        if output_gradients is None:
+            output_gradients = torch.zeros_like(outputs)
 
         state = [t0, outputs, output_gradients, *grad_weights]
 
