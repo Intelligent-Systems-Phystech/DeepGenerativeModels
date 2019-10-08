@@ -265,17 +265,17 @@ class IWAE(VAE):
         z_latent = self.sample_z(propos_distr, self.K)
         z_latent[:, 0, :] = z
 
-        x_distr = model.q_x(z_latent)
+        x_distr = self.q_x(z_latent)
 
-        log_likelihood_true_distr = model.log_likelihood(batch_x, x_distr)
+        log_likelihood_true_distr = self.log_likelihood(batch_x, x_distr)
 
-        normal_log_pdf_prior = model.log_pdf_normal(pri_distr, z_latent)
+        normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
 
-        normal_log_pdf_propos = model.log_pdf_normal(propos_distr, z_latent)
+        normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
         exponent = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
 
-        expectation = model.log_mean_exp(exponent)
+        expectation = self.log_mean_exp(exponent)
 
         log_weight = log_likelihood_true_distr + normal_log_pdf_prior - expectation.view(-1, 1)
         
