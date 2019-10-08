@@ -294,17 +294,17 @@ class IWAE(VAE):
         Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
         """
         
-        pri_distr = model.p_z(batch_x.shape[0])
+        pri_distr = self.p_z(batch_x.shape[0])
        
         z_latent = self.sample_z(distr, self.K)
         
-        x_distr = model.q_x(z_latent)
+        x_distr = self.q_x(z_latent)
         
-        log_likelihood_true_distr = model.log_likelihood(batch_x, x_distr)
+        log_likelihood_true_distr = self.log_likelihood(batch_x, x_distr)
 
-        normal_log_pdf_prior = model.log_pdf_normal(pri_distr, z_latent)
+        normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
 
-        normal_log_pdf_propos = model.log_pdf_normal(propos_distr, z_latent)
+        normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
         log_weight = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
 
