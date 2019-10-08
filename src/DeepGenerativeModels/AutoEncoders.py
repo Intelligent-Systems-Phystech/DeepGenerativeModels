@@ -135,7 +135,7 @@ class VAE(nn.Module):
     def generate_samples(self, num_samples):
         """
         Generate samples of object x from noises in latent space.
-        Input: num_samples, int - the number of samples, wich need to generate.
+        Input: num_samples, int - the number of samples, witch need to generate.
 
         Return: Tensor - the matrix of shape num_samples x input_dim.
         """
@@ -287,7 +287,7 @@ class IWAE(VAE):
         """
         Generates samples z from q_IW(z|x).
         Input: batch_x, FloatTensor - the matrix of shape 1 x input_dim.
-        Input: 1 x latent_dim, int - the number of samples for each element.
+        Input: num_samples, int - the number of samples for each element.
 
 
         Return: Tensor - the tensor of shape 1 x 1 x latent_dim - samples from normal distribution in latent space.
