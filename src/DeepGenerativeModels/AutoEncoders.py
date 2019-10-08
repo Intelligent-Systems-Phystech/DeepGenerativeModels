@@ -247,19 +247,20 @@ class IWAE(VAE):
 
         self.to(device)
 
-    def q_IW(self, z, x):
+    def q_IW(self, z, batch_x):
         """
         Return density value for sample z for q_IW(z|x).
-        Input: x, FloatTensor - the matrix of shape batch_size_x x input_dim.
         Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
+        Input: batch_x, FloatTensor - the matrix of shape batch_size_x x input_dim.
+        
         
         Return: FloatTensor - matrix of shape batch_size_x x 1.
         """
         z = z.to(self.device)
-        x = x.to(self.device)
+        batch_x = batch_x.to(self.device)
 
-        propos_distr = self.q_z(x)
-        pri_distr = self.p_z(x.shape[0])
+        propos_distr = self.q_z(batch_x)
+        pri_distr = self.p_z(batch_x.shape[0])
         
         z_latent = self.sample_z(propos_distr, self.K)
         z_latent[:, 0, :] = z
@@ -282,21 +283,19 @@ class IWAE(VAE):
         
         return proba[:, :1]
 
-    def sample_z_IW(self, distr, num_samples=1):
+    def sample_z_IW(self, batch_x, num_samples=1):
         """
         Generates samples z from q_IW(z|x).
-        Input: distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape 1 x latent_dim.
-            sigma, Tensor - the matrix of shape 1 x latent_dim.
+        Input: batch_x, FloatTensor - the matrix of shape 1 x input_dim.
         Input: 1 x latent_dim, int - the number of samples for each element.
 
 
         Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
         """
-        
         pri_distr = self.p_z(batch_x.shape[0])
+        propos_distr = self.q_z(batch_x)
        
-        z_latent = self.sample_z(distr, self.K)
+        z_latent = self.sample_z(propos_distr, self.K)
         
         x_distr = self.q_x(z_latent)
         
