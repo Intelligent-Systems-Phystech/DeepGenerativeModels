@@ -76,7 +76,7 @@ class VAE(nn.Module):
         Input: num_samples, int - the number of samples for each element.
 
 
-        Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
+        Return: Tensor - the tensor of shape batch_size x num_samples x latent_dim - samples from normal distribution in latent space.
         """
         mu, sigma = distr
         mu = mu.to(self.device)
@@ -290,7 +290,7 @@ class IWAE(VAE):
         Input: 1 x latent_dim, int - the number of samples for each element.
 
 
-        Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
+        Return: Tensor - the tensor of shape 1 x 1 x latent_dim - samples from normal distribution in latent space.
         """
         pri_distr = self.p_z(batch_x.shape[0])
         propos_distr = self.q_z(batch_x)
@@ -313,7 +313,7 @@ class IWAE(VAE):
         
         indexes = cat.sample((1,))
 
-        return z_latent[:, indexes, :][0][0]
+        return z_latent[:, indexes, :][0]
 
 
     def loss(self, batch_x, batch_y):
