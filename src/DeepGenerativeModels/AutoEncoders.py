@@ -286,15 +286,35 @@ class IWAE(VAE):
         """
         Generates samples z from q_IW(z|x).
         Input: distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape batch_size x latent_dim.
-            sigma, Tensor - the matrix of shape batch_size x latent_dim.
-        Input: num_samples, int - the number of samples for each element.
+            mu,    Tensor - the matrix of shape 1 x latent_dim.
+            sigma, Tensor - the matrix of shape 1 x latent_dim.
+        Input: 1 x latent_dim, int - the number of samples for each element.
 
 
         Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
         """
+        
+        pri_distr = model.p_z(batch_x.shape[0])
+       
+        z_latent = self.sample_z(distr, self.K)
+        
+        x_distr = model.q_x(z_latent)
+        
+        log_likelihood_true_distr = model.log_likelihood(batch_x, x_distr)
 
-        return None
+        normal_log_pdf_prior = model.log_pdf_normal(pri_distr, z_latent)
+
+        normal_log_pdf_propos = model.log_pdf_normal(propos_distr, z_latent)
+
+        log_weight = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
+
+        weight = torch.softmax(log_weight, dim = 1)
+
+        cat = torch.distributions.Categorical(weight)
+        
+        indexes = cat.sample_n(1)
+
+        return z_latent[:, indexes, :][0][0]
 
 
     def loss(self, batch_x, batch_y):
