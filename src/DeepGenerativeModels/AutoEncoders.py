@@ -69,7 +69,7 @@ class VAE(nn.Module):
 
     def sample_z(self, distr, num_samples=1):
         """
-        Generates samples from normal distribution of z.
+        Generates samples from normal distribution q(z|x).
         Input: distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
             mu,    Tensor - the matrix of shape batch_size x latent_dim.
             sigma, Tensor - the matrix of shape batch_size x latent_dim.
@@ -281,6 +281,20 @@ class IWAE(VAE):
         proba = torch.exp(torch.mean(log_likelihood_true_distr_i + normal_log_pdf_prior_i)-torch.mean(expectation, dim=0))
 
         return proba
+
+    def sample_z_IW(self, distr, num_samples=1):
+        """
+        Generates samples of z from q_IW(z|x).
+        Input: distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
+            mu,    Tensor - the matrix of shape batch_size x latent_dim.
+            sigma, Tensor - the matrix of shape batch_size x latent_dim.
+        Input: num_samples, int - the number of samples for each element.
+
+
+        Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
+        """
+
+        return None
 
 
     def loss(self, batch_x, batch_y):
