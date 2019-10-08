@@ -47,8 +47,6 @@ class VAE(nn.Module):
             mu,    Tensor - the matrix of shape batch_size x latent_dim.
             sigma, Tensor - the matrix of shape batch_size x latent_dim.
         """
-        x = x.to(self.device)
-
         proposal = self.proposal_z(x)
         mu = self.proposal_mu(proposal)
         sigma = torch.nn.Softplus()(self.proposal_sigma(proposal))
@@ -63,8 +61,8 @@ class VAE(nn.Module):
             mu,    Tensor - the matrix of shape num_samples x latent_dim.
             sigma, Tensor - the matrix of shape num_samples x latent_dim.
         """
-        mu = torch.zeros([num_samples, self.latent_dim], device=self.device)
-        sigma = torch.ones([num_samples, self.latent_dim], device=self.device)
+        mu = torch.zeros([num_samples, self.latent_dim])
+        sigma = torch.ones([num_samples, self.latent_dim])
         return mu, sigma
 
     def sample_z(self, distr, num_samples=1):
@@ -79,16 +77,13 @@ class VAE(nn.Module):
         Return: Tensor - the tensor of shape n x num_samples x latent_dim - samples from normal distribution in latent space.
         """
         mu, sigma = distr
-        mu = mu.to(self.device)
-        sigma = sigma.to(self.device)
 
         batch_size = mu.shape[0]
 
         bias = mu.view([batch_size, 1, self.latent_dim])
 
-        epsilon = torch.randn([batch_size, num_samples, self.latent_dim], 
-                                requires_grad=True, 
-                                device=self.device)
+        epsilon = torch.randn(
+            [batch_size, num_samples, self.latent_dim], requires_grad=True)
         scale = sigma.view([batch_size, 1, self.latent_dim])
 
         return bias + epsilon * scale
@@ -100,7 +95,6 @@ class VAE(nn.Module):
 
         Return: Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
         """
-        z = z.to(self.device)
         out = self.generative_network(z)
 
         return torch.clamp(out, 0.01, 0.99)
@@ -113,9 +107,6 @@ class VAE(nn.Module):
 
         Return: Tensor - scalar, ELBO approximation of log likelihood for given batch with negative sign.
         """
-        batch_x = batch_x.to(self.device)
-        batch_y = batch_y.to(self.device)
-
         batch_size = batch_x.shape[0]
 
         propos_distr = self.q_z(batch_x)
@@ -145,7 +136,7 @@ class VAE(nn.Module):
 
         distr_x = self.q_x(z).view([num_samples, -1])
 
-        return torch.bernoulli(distr_x, device = self.device)
+        return torch.bernoulli(distr_x)
 
     @staticmethod
     def log_pdf_normal(distr, samples):
@@ -159,7 +150,6 @@ class VAE(nn.Module):
         Return: Tensor - the matrix of shape batch_size x num_samples, each element of which is the logarithm of the probability density of a point relative to the corresponding distribution.
         """
         mu, sigma = distr
-
         batch_size = mu.shape[0]
         latent_dim = mu.shape[1]
 
@@ -196,9 +186,8 @@ class VAE(nn.Module):
 
         Return: Tensor - the tensor of shape n_1 x n_2 x ,,, x n_{K - 1}.
         """
-
         return torch.logsumexp(data, dim=-1) - \
-            torch.log(torch.Tensor([data.shape[-1]]).to(data.device))
+            torch.log(torch.Tensor([data.shape[-1]]))
 
     @staticmethod
     def divergence_KL_normal(q_distr, p_distr):
@@ -247,60 +236,22 @@ class IWAE(VAE):
 
         self.to(device)
 
-    def posterior_z(self, z, x):
-        """
-        Return margin distribution of Z
-        Input: x, FloatTensor - the matrix of shape 1 x input_dim.
-        Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
-        
-        Return: FloatTensor - matrix of shape 1 x batch_size_x.
-        """
-        z = z.to(self.device)
-        x = x.to(self.device)
-
-        propos_distr = self.q_z(x)
-        pri_distr = self.p_z(x.shape[0])
-        
-        z_latent = self.sample_z(propos_distr, self.K)
-        z_latent[:, 0, :] = z
-
-        x_distr = self.q_x(z_latent)
-
-        log_likelihood_true_distr = self.log_likelihood(x, x_distr)
-        log_likelihood_true_distr_i = log_likelihood_true_distr[:, :1]
-
-        normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
-        normal_log_pdf_prior_i = normal_log_pdf_prior[:, :1]
-
-        normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
-
-        exponent = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
-
-        expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
-
-        proba = torch.exp(torch.mean(log_likelihood_true_distr_i + normal_log_pdf_prior_i)-torch.mean(expectation, dim=0))
-
-        return proba
-
-
     def loss(self, batch_x, batch_y):
         """
         Calculate k-sample lower bound approximation of log likelihood for given batch with negative sign.
-        Input: batch_x, FloatTensor - the matrix of shape batch_size x input_dim.
+        Input: batch_x, FloatTensor - the matrix of shape n x D.
         Input: batch_y, FloatTensor - dont uses parameter in this model.
 
         Return: Tensor - scalar, k-sample lower bound approximation of log likelihood for given batch with negative sign.
         """
-        batch_x = batch_x.to(self.device)
-        batch_y = batch_y.to(self.device)
-
         propos_distr = self.q_z(batch_x)
         pri_distr = self.p_z(batch_x.shape[0])
 
+        x_true = batch_x
         z_latent = self.sample_z(propos_distr, num_samples=self.K)
         x_distr = self.q_x(z_latent)
 
-        log_likelihood_true_distr = self.log_likelihood(batch_x, x_distr)
+        log_likelihood_true_distr = self.log_likelihood(x_true, x_distr)
         normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
         normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
@@ -310,8 +261,3 @@ class IWAE(VAE):
         expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
 
         return -1 * torch.mean(expectation, dim=0)
-
-
-
-
-
