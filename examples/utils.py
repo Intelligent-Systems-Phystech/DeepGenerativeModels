@@ -9,6 +9,9 @@ from torch import optim
 from scipy.stats import norm
 import numpy as np
 
+from scipy.special import logsumexp
+from scipy.stats import multivariate_normal
+
 # Additional function for training
 
 
@@ -166,4 +169,41 @@ def draw_reconstucted_samples(model, batch_x, num_samples=15, images_size=(28, 2
                    j * images_size[1]: (j + 1) * images_size[1]] = image
 
     return figure
+
+
+
+def q_IW(z, K=10, latent_dim=2, q_z = None, p_z = None):
+    """
+    Return density probability for z from q_IW.
+    Input: z, numpy.array       - the matrix of shape 1 x latent_dim.
+    Input: K, int               - scalar, the number of samples in Importance Sampling.
+    Input: latent_dim           - the space dimensional.
+    Input: q_z, <class>         - the class of approximated distribution from normal. 
+                                  It's need to have method rvs for generate samples.
+                                  It's need to have method logpdf for generate log of density function.
+                                  Default it's multivariate_normal from scipy.stats.
+    Input: p_z, <function>      - the function witch return real density probability of z.
+                                  Default it is a mixture of gaussian.
+    
+    Return: q_IW, numpy.array   - the scalar. The density probability for z from q_IW
+    """
+    if q_z is None:
+        q_z = multivariate_normal(mean=np.zeros(2), cov=np.eye(2))
+    if p_z is None:
+        mixture = [multivariate_normal(mean=3*np.array([0, 1]), cov=2*np.eye(2)), 
+                   multivariate_normal(mean=-1.5*np.ones(2), cov=0.75*np.eye(2)), 
+                   multivariate_normal(mean=1.5*np.ones(2), cov=np.eye(2)), 
+                   multivariate_normal(mean=np.zeros(2), cov=np.eye(2)), 
+                   multivariate_normal(mean=3*np.array([0, 1]), cov=np.eye(2))]
+        p_z = lambda x: np.log(np.mean(np.array([mix.pdf(x) for mix in mixture]), axis = 0))
+    
+    z_latent = q_z.rvs(K).reshape([-1, latent_dim])
+    z_latent[0] = z
+
+    exponent = np.array([p_z(z_latent)]).reshape([-1]) - np.array([q_z.logpdf(z_latent)]).reshape([-1])
+
+    expectation = logsumexp(exponent) - np.log(K)
+
+    proba = np.exp(np.array([p_z(z_latent)]).reshape([-1]) - expectation)
+    return proba[0]
     
