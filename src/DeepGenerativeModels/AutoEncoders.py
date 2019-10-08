@@ -247,9 +247,9 @@ class IWAE(VAE):
 
         self.to(device)
 
-    def posterior_z(self, z, x):
+    def q_IW(self, z, x):
         """
-        Return margin distribution of Z
+        Return density value for sample z for q_IW(z|x).
         Input: x, FloatTensor - the matrix of shape 1 x input_dim.
         Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
         
@@ -275,7 +275,7 @@ class IWAE(VAE):
         normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
         exponent = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
-
+        
         expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
 
         proba = torch.exp(torch.mean(log_likelihood_true_distr_i + normal_log_pdf_prior_i)-torch.mean(expectation, dim=0))
@@ -284,7 +284,7 @@ class IWAE(VAE):
 
     def sample_z_IW(self, distr, num_samples=1):
         """
-        Generates samples of z from q_IW(z|x).
+        Generates samples z from q_IW(z|x).
         Input: distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
             mu,    Tensor - the matrix of shape batch_size x latent_dim.
             sigma, Tensor - the matrix of shape batch_size x latent_dim.
