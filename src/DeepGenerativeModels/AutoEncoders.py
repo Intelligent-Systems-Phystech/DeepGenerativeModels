@@ -292,6 +292,7 @@ class IWAE(VAE):
 
         Return: Tensor - the tensor of shape 1 x 1 x latent_dim - samples from normal distribution in latent space.
         """
+        batch_x = batch_x.to(self.device)
         pri_distr = self.p_z(batch_x.shape[0])
         propos_distr = self.q_z(batch_x)
        
