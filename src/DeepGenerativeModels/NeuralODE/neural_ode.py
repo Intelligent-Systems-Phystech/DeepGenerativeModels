@@ -15,7 +15,7 @@ def get_flat_parameters(parameters):
 
 
 def forward_dynamics(state, ode_func):
-    return [1.0, ode_func(state[1])]
+    return [1.0, ode_func(state)]
 
 
 def backward_dynamics(state, parameters, ode_func):
@@ -23,7 +23,7 @@ def backward_dynamics(state, parameters, ode_func):
         t = state[0]
         ht = state[1].requires_grad_(True)
         at = -state[2]
-        ht_new = ode_func(ht)
+        ht_new = ode_func([t, ht])
         gradients = autograd.grad(outputs=ht_new,
                                   inputs=[ht] + list(ode_func.parameters()),
                                   grad_outputs=at)
@@ -39,7 +39,7 @@ class ODEAdjoint(torch.autograd.Function):
         state = [timestamps[0], inputs]
 
         for dt in time_intervals:
-            state = ode_solver(func=lambda state: forward_dynamics(state, ode_func), dt=dt, state=state)
+            state = ode_solver(func=lambda input_state: forward_dynamics(input_state, ode_func), dt=dt, state=state)
             states.append(state[1])
         states = torch.stack(states)
 
@@ -68,7 +68,7 @@ class ODEAdjoint(torch.autograd.Function):
         state = [t0, outputs, output_gradients, grad_weights]
 
         for dt in time_intervals[::-1]:
-            state = ode_solver(lambda state: backward_dynamics(state, parameters, ode_func),
+            state = ode_solver(lambda input_state: backward_dynamics(input_state, parameters, ode_func),
                                dt=dt, state=state)
         if len(state) == 3:
             print(state[2])
@@ -86,9 +86,9 @@ class NeuralODE(nn.Module):
         self.ode_solver = ode_solver
 
     def forward(self, inputs):
-        z = ODEAdjoint.apply(inputs,
-                             self.timestamps,
-                             get_flat_parameters(self.ode_func.parameters()),
-                             self.ode_func,
-                             self.ode_solver)
-        return z
+        output = ODEAdjoint.apply(inputs,
+                                  self.timestamps,
+                                  get_flat_parameters(self.ode_func.parameters()),
+                                  self.ode_func,
+                                  self.ode_solver)
+        return output
