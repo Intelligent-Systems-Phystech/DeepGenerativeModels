@@ -31,7 +31,7 @@ def backward_dynamics(state, parameters, ode_func):
     return [1.0, ht_new, gradients[0], gradients_w]
 
 
-class ODEAdjoint(torch.autograd.Function):
+class AdjointODEFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, timestamps, parameters, ode_func, ode_solver):
         time_intervals = timestamps[1:] - timestamps[:-1]
@@ -70,25 +70,41 @@ class ODEAdjoint(torch.autograd.Function):
         for dt in time_intervals[::-1]:
             state = ode_solver(lambda input_state: backward_dynamics(input_state, parameters, ode_func),
                                dt=dt, state=state)
-        if len(state) == 3:
-            print(state[2])
-            return -state[2], None, None, None, None
-        else:
-            return -state[2], None, -state[3], None, None
+
+        return -state[2], None, -state[3], None, None
 
 
-class NeuralODE(nn.Module):
+class AdjointODE(nn.Module):
     def __init__(self, ode_func, timestamps, ode_solver):
-        super(NeuralODE, self).__init__()
+        super(AdjointODE, self).__init__()
         self.timestamps = timestamps
         self.ode_func = ode_func
         self.time_intervals = timestamps[1:] - timestamps[:-1]
         self.ode_solver = ode_solver
 
     def forward(self, inputs):
-        output = ODEAdjoint.apply(inputs,
+        output = AdjointODEFunc.apply(inputs,
                                   self.timestamps,
                                   get_flat_parameters(self.ode_func.parameters()),
                                   self.ode_func,
                                   self.ode_solver)
         return output
+
+
+class AutogradODE(nn.Module):
+    def __init__(self, timestamps, ode_solver, ode_model):
+        super(AutogradODE, self).__init__()
+        self.timestamps = timestamps
+        self.ode_model = ode_model
+        self.time_intervals = timestamps[1:] - timestamps[:-1]
+
+    def forward_dynamics(self, state):
+        return [1.0, self.ode_model(state)]
+
+    def forward(self, inputs):
+        states = [inputs]
+        state = [self.timestamps[0], inputs]
+        for dt in self.time_intervals:
+            state = self.ode_solver(func=self.forward_dynamics, dt=dt, state=state)
+            states.append(state[1])
+        return states
