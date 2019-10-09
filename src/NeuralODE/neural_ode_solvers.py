@@ -84,19 +84,20 @@ class AdjointODE(nn.Module):
 
     def forward(self, inputs):
         output = AdjointODEFunc.apply(inputs,
-                                  self.timestamps,
-                                  get_flat_parameters(self.ode_func.parameters()),
-                                  self.ode_func,
-                                  self.ode_solver)
+                                      self.timestamps,
+                                      get_flat_parameters(self.ode_func.parameters()),
+                                      self.ode_func,
+                                      self.ode_solver)
         return output
 
 
 class AutogradODE(nn.Module):
-    def __init__(self, timestamps, ode_solver, ode_model):
+    def __init__(self, timestamps, ode_solver, ode_func):
         super(AutogradODE, self).__init__()
         self.timestamps = timestamps
-        self.ode_model = ode_model
+        self.ode_func = ode_func
         self.time_intervals = timestamps[1:] - timestamps[:-1]
+        self.ode_solver = ode_solver
 
     def forward_dynamics(self, state):
         return [1.0, self.ode_model(state)]
