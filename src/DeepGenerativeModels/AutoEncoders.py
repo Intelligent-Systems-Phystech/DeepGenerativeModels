@@ -9,12 +9,19 @@ from torch import optim
 
 class VAE(nn.Module):
     def __init__(self, latent_dim, input_dim, hidden_dim=200, device='cpu'):
-        """
+        r"""
         Standart model of VAE with ELBO optimization.
-        Input: latent_dim,  int     - the dimension of latent space.
-        Input: input_dim,   int     - the dimension of input space.
-        Input: device,      string  - the type of computing device: 'cpu' or 'gpu'.
-        Input: hidden_dim,  int     - the size of hidden_dim neural layer.
+        Args: 
+        	latent_dim:  int - the dimension of latent space.
+        	input_dim:   int     - the dimension of input space.
+        	device:      string  - the type of computing device: 'cpu' or 'gpu'.
+        	hidden_dim:  int     - the size of hidden_dim neural layer.
+        
+        Returns:
+        	None
+
+        Example:
+        	>>> model = VAE(2, 10)
         """
         super(VAE, self).__init__()
         self.latent_dim = latent_dim
@@ -41,11 +48,16 @@ class VAE(nn.Module):
     def q_z(self, x):
         """
         Generates distribution of z provided x.
-        Input: x, Tensor - the matrix of shape batch_size x input_dim.
+        Args: 
+        	x: Tensor - the matrix of shape batch_size x input_dim.
 
-        Return: (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape batch_size x latent_dim.
-            sigma, Tensor - the matrix of shape batch_size x latent_dim.
+        Returns: 
+        	tuple(Tensor, Tensor) - the normal distribution parameters.
+                mu: 		 Tensor                - the matrix of shape batch_size x latent_dim.
+                sigma: 		 Tensor                - the matrix of shape batch_size x latent_dim.
+        
+        Example:
+            >>>
         """
         x = x.to(self.device)
 
@@ -57,11 +69,16 @@ class VAE(nn.Module):
     def p_z(self, num_samples):
         """
         Generetes prior distribution of z.
-        Input: num_samples, int - the number of samples.
+        Args: 
+        	num_samples: int - the number of samples.
 
-        Return: (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape num_samples x latent_dim.
-            sigma, Tensor - the matrix of shape num_samples x latent_dim.
+        Returns: 
+        	tuple(Tensor, Tensor) - the normal distribution parameters.
+        		mu:    	 Tensor - the matrix of shape num_samples x latent_dim.
+            	sigma: 	 Tensor - the matrix of shape num_samples x latent_dim.
+        
+        Example:
+            >>>
         """
         mu = torch.zeros([num_samples, self.latent_dim], device=self.device)
         sigma = torch.ones([num_samples, self.latent_dim], device=self.device)
@@ -70,13 +87,17 @@ class VAE(nn.Module):
     def sample_z(self, distr, num_samples=1):
         """
         Generates samples from normal distribution q(z|x).
-        Input: distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape batch_size x latent_dim.
-            sigma, Tensor - the matrix of shape batch_size x latent_dim.
-        Input: num_samples, int - the number of samples for each element.
+        Args: 
+        	distr = (mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
+	            mu:    Tensor - the matrix of shape batch_size x latent_dim.
+	            sigma: Tensor - the matrix of shape batch_size x latent_dim.
+            num_samples: int - the number of samples for each element.
 
-
-        Return: Tensor - the tensor of shape batch_size x num_samples x latent_dim - samples from normal distribution in latent space.
+        Returns: 
+            Tensor - the tensor of shape batch_size x num_samples x latent_dim - samples from normal distribution in latent space.
+        
+        Example:
+            >>>
         """
         mu, sigma = distr
         mu = mu.to(self.device)
@@ -96,9 +117,14 @@ class VAE(nn.Module):
     def q_x(self, z):
         """
         Given the latent representation matrix z, returns the matrix of Bernoulli distribution parameters for sampling x objects.
-        Input: z, Tensor - the tensor of shape batch_size x num_samples x latent_dim, samples from latent space.
+        Args: 
+            z: Tensor - the tensor of shape batch_size x num_samples x latent_dim, samples from latent space.
 
-        Return: Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
+        Returns: 
+            Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
+        
+        Example:
+            >>>
         """
         z = z.to(self.device)
         out = self.generative_network(z)
@@ -108,10 +134,15 @@ class VAE(nn.Module):
     def loss(self, batch_x, batch_y):
         """
         Calculate ELBO approximation of log likelihood for given batch with negative sign.
-        Input: batch_x, FloatTensor - the matrix of shape batch_size x input_dim.
-        Input: batch_y, FloatTensor - dont uses parameter in this model.
+        Args: 
+            batch_x: FloatTensor - the matrix of shape batch_size x input_dim.
+            batch_y: FloatTensor - dont uses parameter in this model.
 
-        Return: Tensor - scalar, ELBO approximation of log likelihood for given batch with negative sign.
+        Returns: 
+            Tensor - scalar, ELBO approximation of log likelihood for given batch with negative sign.
+        
+        Example:
+            >>>
         """
         batch_x = batch_x.to(self.device)
         batch_y = batch_y.to(self.device)
@@ -135,9 +166,14 @@ class VAE(nn.Module):
     def generate_samples(self, num_samples):
         """
         Generate samples of object x from noises in latent space.
-        Input: num_samples, int - the number of samples, witch need to generate.
+        Args: 
+            num_samples: int - the number of samples, witch need to generate.
 
-        Return: Tensor - the matrix of shape num_samples x input_dim.
+        Returns: 
+            Tensor - the matrix of shape num_samples x input_dim.
+
+        Example:
+            >>>
         """
         distr_z = self.p_z(num_samples=1)
 
@@ -151,12 +187,17 @@ class VAE(nn.Module):
     def log_pdf_normal(distr, samples):
         """
         The function calculates the logarithm of the probability density at a point relative to the corresponding normal distribution given componentwise by its mean and standard deviation.
-        Input: distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape batch_size x latent_dim.
-            sigma, Tensor - the matrix of shape batch_size x latent_dim.
-        Input: samples, Tensor - the tensor of shape batch_size x num_samples x latent_dim, samples in latent space.
+        Args: 
+            distr = (mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
+                mu:    Tensor - the matrix of shape batch_size x latent_dim.
+                sigma: Tensor - the matrix of shape batch_size x latent_dim.
+            samples: Tensor - the tensor of shape batch_size x num_samples x latent_dim, samples in latent space.
 
-        Return: Tensor - the matrix of shape batch_size x num_samples, each element of which is the logarithm of the probability density of a point relative to the corresponding distribution.
+        Returns: 
+            Tensor - the matrix of shape batch_size x num_samples, each element of which is the logarithm of the probability density of a point relative to the corresponding distribution.
+        
+        Example:
+            >>>
         """
         mu, sigma = distr
 
@@ -174,10 +215,15 @@ class VAE(nn.Module):
     def log_likelihood(x_true, x_distr):
         """
         Calculate log likelihood between x_true and x_distr.
-        Input: x_true,  Tensor - the matrix of shape batch_size x input_dim.
-        Input: x_distr, Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
+        Args: 
+            x_true:  Tensor - the matrix of shape batch_size x input_dim.
+            x_distr: Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
 
-        Return: Tensor - the matrix of shape batch_size x num_samples - log likelihood for each sample.
+        Returns: 
+            Tensor - the matrix of shape batch_size x num_samples - log likelihood for each sample.
+        
+        Example:
+            >>>
         """
         batch_size = x_distr.shape[0]
         input_dim = x_distr.shape[2]
@@ -192,9 +238,14 @@ class VAE(nn.Module):
     @staticmethod
     def log_mean_exp(data):
         """
-        Input: data, Tensor - the tensor of shape n_1 x n_2 x ... x n_K.
+        Args: 
+            data: Tensor - the tensor of shape n_1 x n_2 x ... x n_K.
 
-        Return: Tensor - the tensor of shape n_1 x n_2 x ,,, x n_{K - 1}.
+        Returns: 
+            Tensor - the tensor of shape n_1 x n_2 x ,,, x n_{K - 1}.
+
+        Example:
+            >>>
         """
 
         return torch.logsumexp(data, dim=-1) - \
@@ -204,13 +255,18 @@ class VAE(nn.Module):
     def divergence_KL_normal(q_distr, p_distr):
         """
         Calculate KL-divergence KL(q||p) between n-pairs of normal distribution.
-        Input: q_distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape batch_size x latent_dim.
-            sigma, Tensor - the matrix of shape batch_size x latent_dim.
-        Input: p_distr = (mu, sigma), tuple(Tensor, Tensor) - the normal distribution parameters.
-            mu,    Tensor - the matrix of shape batch_size x latent_dim.
-            sigma, Tensor - the matrix of shape batch_size x latent_dim.
-        Return: Tensor - the vector of shape n, each value of which is a KL-divergence between pair of normal distribution.
+        Args: 
+            q_distr=(mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
+                mu:    Tensor - the matrix of shape batch_size x latent_dim.
+                sigma: Tensor - the matrix of shape batch_size x latent_dim.
+            p_distr=(mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
+                mu:    Tensor - the matrix of shape batch_size x latent_dim.
+                sigma: Tensor - the matrix of shape batch_size x latent_dim.
+        Returns: 
+            Tensor - the vector of shape n, each value of which is a KL-divergence between pair of normal distribution.
+        
+        Example:
+            >>>
         """
         q_mu, q_sigma = q_distr
         p_mu, p_sigma = p_distr
@@ -235,11 +291,18 @@ class IWAE(VAE):
             device='cpu'):
         """
         Standart model of IWAE.
-        Input: latent_dim,     int     - the dimension of latent space.
-        Input: input_dim,      int     - the dimension of input space.
-        Input: K,              int     - the rang of Lower Bound.
-        Input: device,         string  - the type of computing device: 'cpu' or 'gpu'.
-        Input: hidden_dim,     int     - the size of hidden_dim neural layer.
+        Args: 
+            latent_dim:     int     - the dimension of latent space.
+            input_dim:      int     - the dimension of input space.
+            K:              int     - the rang of Lower Bound.
+            device:         string  - the type of computing device: 'cpu' or 'gpu'.
+            hidden_dim:     int     - the size of hidden_dim neural layer.
+
+        Returns:
+            None
+
+        Example:
+            >>>
         """
         super(IWAE, self).__init__(latent_dim, input_dim, hidden_dim, device)
 
@@ -250,11 +313,15 @@ class IWAE(VAE):
     def q_IW(self, z, batch_x):
         """
         Return density value for sample z for q_IW(z|x).
-        Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
-        Input: batch_x, FloatTensor - the matrix of shape batch_size_x x input_dim.
+        Args:
+            z: FloatTensor - the matrix of shape 1 x latent_dim.
+            batch_x: FloatTensor - the matrix of shape batch_size_x x input_dim.
         
+        Returns:
+            FloatTensor - matrix of shape batch_size_x x 1.
         
-        Return: FloatTensor - matrix of shape batch_size_x x 1.
+        Example:
+            >>>
         """
         z = z.to(self.device)
         batch_x = batch_x.to(self.device)
@@ -286,11 +353,15 @@ class IWAE(VAE):
     def sample_z_IW(self, batch_x, num_samples=1):
         """
         Generates samples z from q_IW(z|x).
-        Input: batch_x, FloatTensor - the matrix of shape 1 x input_dim.
-        Input: num_samples, int - the number of samples for each element.
+        Args: 
+            batch_x: FloatTensor - the matrix of shape 1 x input_dim.
+            num_samples: int - the number of samples for each element.
 
-
-        Return: Tensor - the tensor of shape 1 x 1 x latent_dim - samples from normal distribution in latent space.
+        Returns: 
+            Tensor - the tensor of shape 1 x 1 x latent_dim - samples from normal distribution in latent space.
+        
+        Example:
+            >>>
         """
         batch_x = batch_x.to(self.device)
         pri_distr = self.p_z(batch_x.shape[0])
@@ -320,10 +391,15 @@ class IWAE(VAE):
     def loss(self, batch_x, batch_y):
         """
         Calculate k-sample lower bound approximation of log likelihood for given batch with negative sign.
-        Input: batch_x, FloatTensor - the matrix of shape batch_size x input_dim.
-        Input: batch_y, FloatTensor - dont uses parameter in this model.
+        Args: 
+            batch_x: FloatTensor - the matrix of shape batch_size x input_dim.
+            batch_y: FloatTensor - dont uses parameter in this model.
 
-        Return: Tensor - scalar, k-sample lower bound approximation of log likelihood for given batch with negative sign.
+        Returns: 
+            Tensor - scalar, k-sample lower bound approximation of log likelihood for given batch with negative sign.
+       
+        Example:
+            >>>
         """
         batch_x = batch_x.to(self.device)
         batch_y = batch_y.to(self.device)
