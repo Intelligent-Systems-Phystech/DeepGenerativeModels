@@ -206,4 +206,55 @@ def q_IW(z, K=10, latent_dim=2, q_z = None, p_z = None):
 
     proba = np.exp(np.array([p_z(z_latent)]).reshape([-1]) - expectation)
     return proba[0]
+
+
+def score_ae(model, batch_x, batch_y, images_size=(28,28)):
+    """
+    Input: model,                                              - model VAE or IWAE.
+    Input: batch_x,                        Tensor              - the tensor of shape batch_size x input_dim.
+    Input: batch_y,                        Tensor              - dont uses in the ae score computation.
+    Input: images_size = (x_size, y_size), tuple(int, int)     - a size of input image.
+
+
+    Return: (mse_loss, model_loss),        tuple(float, float) - the model quality
+    """
+    mse_arr = []
+    
+    qz = model.q_z(batch_x)
+    qzsample = model.sample_z(qz)
+    model_x = model.q_x(qzsample)[:,0,:]
+    
+    for i in range(batch_x.shape[0]):
+        original_x = batch_x[i].view(images_size).cpu().data.numpy()
+        reconstructed_x = model_x[i].view(images_size).cpu().data.numpy()
+        
+        mse_arr.append((original_x - reconstructed_x)**2)
+        
+    return np.array(mse_arr).mean(), model.loss(batch_x, batch_y).item()
+
+def draw_table(data, title = ['MSE', 'Model Loss'], width = 20):
+    """
+    Input: data,    dict     - is a dict with format
+                                {row_name_1: (title[0], title[1], ...), 
+                                 row_name_2: (title[0], title[1], ...), 
+                                 ...}
+    Input: title,   list     - is the list of column name
+
+    Return: string, str      - is a string of formating data 
+    """
+    string = ""
+    row_format =("|{:>"+str(width)+"}|") * (len(title) + 1)
+    string += str(row_format.format("-"*width, *["-"*width for _ in title])) + '\n'
+    string += str(row_format.format("", *title)) + '\n'
+    string += str(row_format.format("-"*width, *["-"*width for _ in title])) + '\n'
+    for key in data:
+        if len(key) > width:
+            row_name = '...' + key[len(key)-width+3:]
+        else:
+            row_name = key
+        string += str(row_format.format(row_name, *[round(x, 5) for x in data[key]]))+ '\n'
+        string += str(row_format.format("-"*width, *["-"*width for _ in title]))+ '\n'
+
+    return string
+
     
