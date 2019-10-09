@@ -21,10 +21,17 @@ def train_on_batch(model,
 			       optimizer):
     """
     Function for optimize model parameters by using one batch.
-    Input: model,                    - training model.
-    Input: batch_of_x,   FloatTensor - the matrix of shape batch_size x input_dim.
-    Input: batch_of_y,   FloatTensor - the matrix of shape batch_size x ?.
-    Input: optimizer,    Optimimizer - optimizer from torch.optim.
+    Args: 
+        model:                    - training model.
+        batch_of_x:   FloatTensor - the matrix of shape batch_size x input_dim.
+        batch_of_y:   FloatTensor - the matrix of shape batch_size x ?.
+        optimizer:    Optimimizer - optimizer from torch.optim.
+
+    Returns:
+        None
+
+    Example:
+        >>>
     """
     model.zero_grad()
 
@@ -43,10 +50,17 @@ def train_epoch(model,
 	        	callback=None):
     """
     Function for optimize model parameters by using all Dataset.
-    Input: train_generator, DataLoader  - generator of samples from all Dataset.
-    Input: model,                       - training model.
-    Input: optimizer,       Optimimizer - optimizer from torch.optim.
-    Input: callback,        <function>  - function wich call after each epoch.
+    Args: 
+        train_generator: DataLoader  - generator of samples from all Dataset.
+        model:                       - training model.
+        optimizer:       Optimimizer - optimizer from torch.optim.
+        callback:        <function>  - function wich call after each epoch.
+
+    Returns:
+        None
+
+    Example:
+        >>>
     """
     model.train()
     for it, (batch_of_x, batch_of_y) in enumerate(train_generator):
@@ -66,13 +80,20 @@ def trainer(model,
             progress=None):
     """
     Function for optimize model parameters by using all Dataset count_of_epoch times.
-    Input: model,                         - training model.
-    Input: optimizer,       Optimimizer   - optimizer from torch.optim.
-    Input: dataset,         TensorDataset - train dataset.
-    Input: count_of_epoch,  int           - a number of epoch.
-    Input: batch_size,      int           - the size of batch.
-    Input: callback,        <function>    - function wich call after each epoch.
-    Input: progress,        yield         - function to display progress (for example tqdm).
+    Args: 
+        model:                         - training model.
+        ptimizer:       Optimimizer   - optimizer from torch.optim.
+        dataset:         TensorDataset - train dataset.
+        count_of_epoch:  int           - a number of epoch.
+        batch_size:      int           - the size of batch.
+        callback:        <function>    - function wich call after each epoch.
+        progress:        yield         - function to display progress (for example tqdm).
+
+    Returns:
+        None
+
+    Example:
+        >>>
     """
     iterations = range(count_of_epoch)
 
@@ -102,12 +123,17 @@ def draw_samples_grid_vae(model,
     					  images_size=(28, 28)):
     """
     Illustrate how change digits x where change point in latent space z.
-    Input: model,                                          - model VAE or IWAE.
-    Input: num_row,                        int             - the number of row.
-    Input: num_colum,                      int             - the number of column.
-    Input: images_size = (x_size, y_size), tuple(int, int) - a size of input image.
+    Args: 
+        model:                                          - model VAE or IWAE.
+        num_row:                        int             - the number of row.
+        num_colum:                      int             - the number of column.
+        images_size = (x_size, y_size): tuple(int, int) - a size of input image.
 
-    Return: figure,                        float           - the picture
+    Returns: 
+        figure: float - the picture
+
+    Example:
+        >>>
     """
 
     grid_x = norm.ppf(np.linspace(0.05, 0.95, num_colum))
@@ -131,13 +157,18 @@ def draw_samples_grid_vae(model,
 def draw_reconstucted_samples(model, batch_x, num_samples=15, images_size=(28, 28), IW_sampler = True):
     """
     Illustrate how change digits x where change point in latent space z.
-    Input: model,                                          - model VAE or IWAE.
-    Input: batch_x,                        Tensor          - the tensor of shape batch_size x input_dim.
-    Input: num_samples,                    int             - the number of sampled values for each image.
-    Input: images_size = (x_size, y_size), tuple(int, int) - a size of input image.
-    Input: IW_sampler,					   bool            - the flag: use Importance sampling or q_z
+    Args: 
+        model:                                          - model VAE or IWAE.
+        batch_x:                        Tensor          - the tensor of shape batch_size x input_dim.
+        num_samples:                    int             - the number of sampled values for each image.
+        images_size = (x_size, y_size): tuple(int, int) - a size of input image.
+        IW_sampler:					   bool            - the flag: use Importance sampling or q_z
     
-    Return: figure,                        float           - the picture
+    Returns: 
+        figure: float - the picture
+    
+    Example:
+        >>>
     """
     num_row = batch_x.shape[0]
     
@@ -175,17 +206,22 @@ def draw_reconstucted_samples(model, batch_x, num_samples=15, images_size=(28, 2
 def q_IW(z, K=10, latent_dim=2, q_z = None, p_z = None):
     """
     Return density probability for z from q_IW.
-    Input: z, numpy.array       - the matrix of shape 1 x latent_dim.
-    Input: K, int               - scalar, the number of samples in Importance Sampling.
-    Input: latent_dim           - the space dimensional.
-    Input: q_z, <class>         - the class of approximated distribution from normal. 
+    Args: 
+        z: numpy.array       - the matrix of shape 1 x latent_dim.
+        K: int               - scalar, the number of samples in Importance Sampling.
+        latent_dim:           - the space dimensional.
+        q_z: <class>         - the class of approximated distribution from normal. 
                                   It's need to have method rvs for generate samples.
                                   It's need to have method logpdf for generate log of density function.
                                   Default it's multivariate_normal from scipy.stats.
-    Input: p_z, <function>      - the function witch return real density probability of z.
+        p_z: <function>      - the function witch return real density probability of z.
                                   Default it is a mixture of gaussian.
     
-    Return: q_IW, numpy.array   - the scalar. The density probability for z from q_IW
+    Returns: 
+        q_IW: numpy.array   - the scalar. The density probability for z from q_IW
+
+    Example:
+        >>>
     """
     if q_z is None:
         q_z = multivariate_normal(mean=np.zeros(2), cov=np.eye(2))
@@ -210,13 +246,17 @@ def q_IW(z, K=10, latent_dim=2, q_z = None, p_z = None):
 
 def score_ae(model, batch_x, batch_y, images_size=(28,28)):
     """
-    Input: model,                                              - model VAE or IWAE.
-    Input: batch_x,                        Tensor              - the tensor of shape batch_size x input_dim.
-    Input: batch_y,                        Tensor              - dont uses in the ae score computation.
-    Input: images_size = (x_size, y_size), tuple(int, int)     - a size of input image.
+    Args: 
+        model:                                              - model VAE or IWAE.
+        batch_x:                        Tensor              - the tensor of shape batch_size x input_dim.
+        batch_y:                        Tensor              - dont uses in the ae score computation.
+        images_size = (x_size, y_size): tuple(int, int)     - a size of input image.
 
+    Returns: 
+        (mse_loss, model_loss): tuple(float, float) - the model quality
 
-    Return: (mse_loss, model_loss),        tuple(float, float) - the model quality
+    Example:
+        >>>
     """
     mse_arr = []
     
@@ -234,13 +274,18 @@ def score_ae(model, batch_x, batch_y, images_size=(28,28)):
 
 def draw_table(data, title = ['MSE', 'Model Loss'], width = 20):
     """
-    Input: data,    dict     - is a dict with format
-                                {row_name_1: (title[0], title[1], ...), 
-                                 row_name_2: (title[0], title[1], ...), 
-                                 ...}
-    Input: title,   list     - is the list of column name
+    Args: 
+        data: dict - is a dict with format
+                    {row_name_1: (title[0], title[1], ...), 
+                     row_name_2: (title[0], title[1], ...), 
+                     ...}
+        title: list - is the list of column name
 
-    Return: string, str      - is a string of formating data 
+    Returns: 
+        string: str - is a string of formating data in table
+
+    Example:
+        >>>
     """
     string = ""
     row_format =("|{:>"+str(width)+"}|") * (len(title) + 1)
