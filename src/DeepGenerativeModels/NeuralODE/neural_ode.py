@@ -4,8 +4,18 @@ from torch import nn
 from torch import autograd
 
 
+def get_flat_parameters(parameters):
+    flat_parameters = []
+    for p in parameters:
+        flat_parameters.append(p.flatten())
+    if len(flat_parameters) == 0:
+        return torch.Tensor([]).requires_grad_(True)
+    else:
+        return torch.cat(flat_parameters)
+
+
 def forward_dynamics(state, ode_func):
-    return [1.0, ode_func(state)]
+    return [1.0, ode_func(state[1])]
 
 
 def backward_dynamics(state, parameters, ode_func):
@@ -13,15 +23,12 @@ def backward_dynamics(state, parameters, ode_func):
         t = state[0]
         ht = state[1].requires_grad_(True)
         at = -state[2]
-        ht_new = ode_func(inputs=[t, ht])
+        ht_new = ode_func(ht)
         gradients = autograd.grad(outputs=ht_new,
-                                  inputs=[ht, parameters],
-                                  grad_outputs=at,
-                                  allow_unused=True)
-    if len(parameters) == 0:
-        return [1.0, ht_new, gradients[0]]
-    else:
-        return [1.0, ht_new, *gradients]
+                                  inputs=[ht] + list(ode_func.parameters()),
+                                  grad_outputs=at)
+    gradients_w = get_flat_parameters(gradients[1:])
+    return [1.0, ht_new, gradients[0], gradients_w]
 
 
 class ODEAdjoint(torch.autograd.Function):
@@ -67,7 +74,7 @@ class ODEAdjoint(torch.autograd.Function):
             print(state[2])
             return -state[2], None, None, None, None
         else:
-            return -state[2], None, state[3], None, None
+            return -state[2], None, -state[3], None, None
 
 
 class NeuralODE(nn.Module):
@@ -81,17 +88,7 @@ class NeuralODE(nn.Module):
     def forward(self, inputs):
         z = ODEAdjoint.apply(inputs,
                              self.timestamps,
-                             self.get_flat_parameters(self.ode_func),
+                             get_flat_parameters(self.ode_func.parameters()),
                              self.ode_func,
                              self.ode_solver)
         return z
-
-    @staticmethod
-    def get_flat_parameters(model):
-        flat_parameters = []
-        for p in model.parameters():
-            flat_parameters.append(p.flatten())
-        if len(flat_parameters) == 0:
-            return torch.Tensor([]).requires_grad_(True)
-        else:
-            return torch.cat(flat_parameters)
