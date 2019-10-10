@@ -3,6 +3,7 @@ import math
 import torch
 from torch import nn
 from torch import optim
+from RealNVP import RealNVP
 
 # Variational Auto Encoder
 
@@ -310,6 +311,90 @@ class IWAE(VAE):
         expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
 
         return -1 * torch.mean(expectation, dim=0)
+
+
+class FlowVAE(VAE):
+    def __init__(self, latent_dim, input_dim, hidden_dim=200, device='cpu'):
+        """
+        Standart model of VAE with ELBO optimization.
+        Input: latent_dim,  int     - the dimension of latent space.
+        Input: input_dim,   int     - the dimension of input space.
+        Input: device,      string  - the type of computing device: 'cpu' or 'gpu'.
+        Input: hidden_dim,  int     - the size of hidden_dim neural layer.
+        """
+        super(VAE, self).__init__()
+        self.latent_dim = latent_dim
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.device = device
+        self.flow = RealNVP(dim=latent_dim)
+        self.proposal_z = nn.Sequential(
+            nn.Linear(self.input_dim, hidden_dim),
+            nn.LeakyReLU(),
+        )
+        self.proposal_mu = nn.Linear(hidden_dim, self.latent_dim)
+        self.proposal_sigma = nn.Linear(hidden_dim, self.latent_dim)
+
+        self.generative_network = nn.Sequential(
+            nn.Linear(self.latent_dim, hidden_dim),
+            nn.LeakyReLU(),
+            nn.Linear(hidden_dim, self.input_dim),
+            nn.Sigmoid()
+        )
+
+        self.to(device)
+
+
+    def get_zk(self, z0):
+        z1, log_det = self.flow(z0)
+        return z1, log_det
+
+    def loss(self, batch_x, batch_y):
+        """
+        Calculate ELBO approximation of log likelihood for given batch with negative sign.
+        Input: batch_x, FloatTensor - the matrix of shape batch_size x input_dim.
+        Input: batch_y, FloatTensor - dont uses parameter in this model.
+
+        Return: Tensor - scalar, ELBO approximation of log likelihood for given batch with negative sign.
+        """
+        batch_x = batch_x.to(self.device)
+        batch_y = batch_y.to(self.device)
+        batch_size = batch_x.shape[0]
+
+        propos_distr = self.q_z(batch_x)
+        pri_distr = self.p_z(batch_size)
+        z = self.sample_z(propos_distr).view(-1, self.latent_dim)
+        
+        zk, log_det = self.get_zk(z)
+        x_distr = self.q_x(zk)
+
+        expectation = torch.mean(
+            self.log_mean_exp(
+                self.log_likelihood(
+                    batch_x, x_distr)), dim=0)
+
+        divergence = self.divergence_KL_normal(propos_distr, pri_distr)
+
+        return -1 * torch.mean(expectation - divergence - log_det, dim=0)
+    
+    
+    def posterior_z(self, z, x):
+        """
+        Return margin distribution of Z
+        Input: x, FloatTensor - the matrix of shape 1 x input_dim.
+        Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
+        
+        Return: FloatTensor - matrix of shape 1 x batch_size_x.
+        """
+        z = z.to(self.device)
+        zk, log_det = self.get_zk(z)
+        x = x.to(self.device)
+
+        mu, sigma = self.q_z(x)
+        
+        mulnorm = torch.distributions.MultivariateNormal(mu, covariance_matrix=torch.eye(sigma.shape[-1])*(sigma))
+        proba = mulnorm.log_prob(z) - log_det        
+        return proba
 
 
 
