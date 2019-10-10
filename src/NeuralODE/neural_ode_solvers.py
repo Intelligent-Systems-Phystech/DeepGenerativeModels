@@ -34,44 +34,46 @@ def backward_dynamics(state, parameters, ode_func):
 class AdjointODEFunc(torch.autograd.Function):
     @staticmethod
     def forward(ctx, inputs, timestamps, parameters, ode_func, ode_solver):
-        time_intervals = timestamps[1:] - timestamps[:-1]
-        states = [inputs]
-        state = [timestamps[0], inputs]
+        with torch.no_grad():
+            time_intervals = timestamps[1:] - timestamps[:-1]
+            states = [inputs]
+            state = [timestamps[0], inputs]
 
-        for dt in time_intervals:
-            state = ode_solver(func=lambda input_state: forward_dynamics(input_state, ode_func), dt=dt, state=state)
-            states.append(state[1])
-        states = torch.stack(states)
+            for dt in time_intervals:
+                state = ode_solver(func=lambda input_state: forward_dynamics(input_state, ode_func), dt=dt, state=state)
+                states.append(state[1])
+            states = torch.stack(states)
 
-        ctx.func = ode_func
-        ctx.timestamps = timestamps
-        ctx.ode_solver = ode_solver
-        ctx.save_for_backward(states.clone(), parameters)
+            ctx.func = ode_func
+            ctx.timestamps = timestamps
+            ctx.ode_solver = ode_solver
+            ctx.save_for_backward(states.clone(), parameters)
 
-        return states[-1]
+            return states[-1]
 
     @staticmethod
     def backward(ctx, output_gradients):
-        ode_func = ctx.func
-        timestamps = ctx.timestamps
-        ode_solver = ctx.ode_solver
+        with torch.no_grad():
+            ode_func = ctx.func
+            timestamps = ctx.timestamps
+            ode_solver = ctx.ode_solver
 
-        states, parameters = ctx.saved_tensors
-        time_intervals = timestamps[1:] - timestamps[:-1]
-        outputs = states[-1]
-        grad_weights = torch.zeros_like(parameters)
+            states, parameters = ctx.saved_tensors
+            time_intervals = timestamps[1:] - timestamps[:-1]
+            outputs = states[-1]
+            grad_weights = torch.zeros_like(parameters)
 
-        if output_gradients is None:
-            output_gradients = torch.zeros_like(outputs)
+            if output_gradients is None:
+                output_gradients = torch.zeros_like(outputs)
 
-        t0 = timestamps[-1]
-        state = [t0, outputs, output_gradients, grad_weights]
+            t0 = timestamps[-1]
+            state = [t0, outputs, output_gradients, grad_weights]
 
-        for dt in time_intervals[::-1]:
-            state = ode_solver(lambda input_state: backward_dynamics(input_state, parameters, ode_func),
-                               dt=dt, state=state)
+            for dt in time_intervals[::-1]:
+                state = ode_solver(lambda input_state: backward_dynamics(input_state, parameters, ode_func),
+                                   dt=dt, state=state)
 
-        return -state[2], None, -state[3], None, None
+            return -state[2], None, -state[3], None, None
 
 
 class AdjointODE(nn.Module):
@@ -100,7 +102,7 @@ class AutogradODE(nn.Module):
         self.ode_solver = ode_solver
 
     def forward_dynamics(self, state):
-        return [1.0, self.ode_model(state)]
+        return [1.0, self.ode_func(state)]
 
     def forward(self, inputs):
         states = [inputs]
