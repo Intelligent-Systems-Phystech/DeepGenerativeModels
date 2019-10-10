@@ -3,7 +3,7 @@ import math
 import torch
 from torch import nn
 from torch import optim
-from RealNVP import RealNVP
+from DeepGenerativeModels.RealNVP import RealNVP
 
 # Variational Auto Encoder
 
@@ -147,6 +147,22 @@ class VAE(nn.Module):
         distr_x = self.q_x(z).view([num_samples, -1])
 
         return torch.bernoulli(distr_x, device = self.device)
+    
+    
+    def posterior_z(self, z, x):
+        """
+        Return margin distribution of Z
+        Input: x, FloatTensor - the matrix of shape 1 x input_dim.
+        Input: z, FloatTensor - the matrix of shape 1 x latent_dim.
+        
+        Return: FloatTensor - matrix of shape 1 x batch_size_x.
+        """
+        z = z.to(self.device)
+        x = x.to(self.device)
+        mu, sigma = self.q_z(x)
+        mulnorm = torch.distributions.MultivariateNormal(mu, covariance_matrix=torch.eye(sigma.shape[-1])*sigma)
+        log_proba = mulnorm.log_prob(z)       
+        return torch.exp(log_proba)
 
     @staticmethod
     def log_pdf_normal(distr, samples):
@@ -181,7 +197,7 @@ class VAE(nn.Module):
         Return: Tensor - the matrix of shape batch_size x num_samples - log likelihood for each sample.
         """
         batch_size = x_distr.shape[0]
-        input_dim = x_distr.shape[2]
+        input_dim = x_distr.shape[-1]
 
         bernoulli_log_likelihood = torch.log(
             x_distr) * x_true.view([batch_size, 1, input_dim])
@@ -345,10 +361,6 @@ class FlowVAE(VAE):
         self.to(device)
 
 
-    def get_zk(self, z0):
-        z1, log_det = self.flow(z0)
-        return z1, log_det
-
     def loss(self, batch_x, batch_y):
         """
         Calculate ELBO approximation of log likelihood for given batch with negative sign.
@@ -365,7 +377,7 @@ class FlowVAE(VAE):
         pri_distr = self.p_z(batch_size)
         z = self.sample_z(propos_distr).view(-1, self.latent_dim)
         
-        zk, log_det = self.get_zk(z)
+        zk, log_det = self.flow(z)
         x_distr = self.q_x(zk)
 
         expectation = torch.mean(
@@ -387,14 +399,31 @@ class FlowVAE(VAE):
         Return: FloatTensor - matrix of shape 1 x batch_size_x.
         """
         z = z.to(self.device)
-        zk, log_det = self.get_zk(z)
+        zk, log_det = self.flow(z)
         x = x.to(self.device)
 
         mu, sigma = self.q_z(x)
         
-        mulnorm = torch.distributions.MultivariateNormal(mu, covariance_matrix=torch.eye(sigma.shape[-1])*(sigma))
-        proba = mulnorm.log_prob(z) - log_det        
-        return proba
+        mn = torch.distributions.MultivariateNormal(mu, covariance_matrix=torch.eye(sigma.shape[-1])*(sigma))
+        log_proba = mn.log_prob(z) - log_det        
+        return torch.exp(log_proba)
+
+
+    def generate_samples(self, num_samples):
+        """
+        Generate samples of object x from noises in latent space.
+        Input: num_samples, int - the number of samples, wich need to generate.
+
+        Return: Tensor - the matrix of shape num_samples x input_dim.
+        """
+        distr_z = self.p_z(num_samples=1)
+
+        z = self.sample_z(distr, num_samples=num_samples)
+        z, _ = self.flow(z)
+
+        distr_x = self.q_x(z).view([num_samples, -1])
+
+        return torch.bernoulli(distr_x, device = self.device)
 
 
 
