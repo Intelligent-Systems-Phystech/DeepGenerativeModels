@@ -9,19 +9,19 @@ from torch import optim
 
 class VAE(nn.Module):
     def __init__(self, latent_dim, input_dim, hidden_dim=200, device='cpu'):
-        r"""
+        """
         Standart model of VAE with ELBO optimization.
-        Args: 
-        	latent_dim:  int - the dimension of latent space.
-        	input_dim:   int     - the dimension of input space.
-        	device:      string  - the type of computing device: 'cpu' or 'gpu'.
-        	hidden_dim:  int     - the size of hidden_dim neural layer.
-        
+        Args:
+            latent_dim: int - the dimension of latent space.
+            input_dim: int - the dimension of input space.
+            device: string - the type of computing device: 'cpu' or 'gpu'.
+            hidden_dim: int - the size of hidden_dim neural layer.
+
         Returns:
-        	None
+            None
 
         Example:
-        	>>> model = VAE(2, 10)
+            >>> model = VAE(2, 10)
         """
         super(VAE, self).__init__()
         self.latent_dim = latent_dim
@@ -48,14 +48,14 @@ class VAE(nn.Module):
     def q_z(self, x):
         """
         Generates distribution of z provided x.
-        Args: 
-        	x: Tensor - the matrix of shape batch_size x input_dim.
+        Args:
+            x: Tensor - the matrix of shape batch_size x input_dim.
 
-        Returns: 
-        	tuple(Tensor, Tensor) - the normal distribution parameters.
-                mu: 		 Tensor                - the matrix of shape batch_size x latent_dim.
-                sigma: 		 Tensor                - the matrix of shape batch_size x latent_dim.
-        
+        Returns:
+            tuple(Tensor, Tensor) - the normal distribution parameters.
+            mu: Tensor - the matrix of shape batch_size x latent_dim.
+            sigma: Tensor - the matrix of shape batch_size x latent_dim.
+
         Example:
             >>>
         """
@@ -69,14 +69,14 @@ class VAE(nn.Module):
     def p_z(self, num_samples):
         """
         Generetes prior distribution of z.
-        Args: 
-        	num_samples: int - the number of samples.
+        Args:
+            num_samples: int - the number of samples.
 
-        Returns: 
-        	tuple(Tensor, Tensor) - the normal distribution parameters.
-        		mu:    	 Tensor - the matrix of shape num_samples x latent_dim.
-            	sigma: 	 Tensor - the matrix of shape num_samples x latent_dim.
-        
+        Returns:
+            tuple(Tensor, Tensor) - the normal distribution parameters.
+                mu: Tensor - the matrix of shape num_samples x latent_dim.
+            	sigma: Tensor - the matrix of shape num_samples x latent_dim.
+
         Example:
             >>>
         """
@@ -87,15 +87,15 @@ class VAE(nn.Module):
     def sample_z(self, distr, num_samples=1):
         """
         Generates samples from normal distribution q(z|x).
-        Args: 
-        	distr = (mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
-	            mu:    Tensor - the matrix of shape batch_size x latent_dim.
-	            sigma: Tensor - the matrix of shape batch_size x latent_dim.
+        Args:
+            distr = (mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
+                mu: Tensor - the matrix of shape batch_size x latent_dim.
+                sigma: Tensor - the matrix of shape batch_size x latent_dim.
             num_samples: int - the number of samples for each element.
 
-        Returns: 
+        Returns:
             Tensor - the tensor of shape batch_size x num_samples x latent_dim - samples from normal distribution in latent space.
-        
+
         Example:
             >>>
         """
@@ -107,9 +107,9 @@ class VAE(nn.Module):
 
         bias = mu.view([batch_size, 1, self.latent_dim])
 
-        epsilon = torch.randn([batch_size, num_samples, self.latent_dim], 
-                                requires_grad=True, 
-                                device=self.device)
+        epsilon = torch.randn([batch_size, num_samples, self.latent_dim],
+                              requires_grad=True,
+                              device=self.device)
         scale = sigma.view([batch_size, 1, self.latent_dim])
 
         return bias + epsilon * scale
@@ -117,12 +117,12 @@ class VAE(nn.Module):
     def q_x(self, z):
         """
         Given the latent representation matrix z, returns the matrix of Bernoulli distribution parameters for sampling x objects.
-        Args: 
+        Args:
             z: Tensor - the tensor of shape batch_size x num_samples x latent_dim, samples from latent space.
 
-        Returns: 
+        Returns:
             Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
-        
+
         Example:
             >>>
         """
@@ -134,13 +134,13 @@ class VAE(nn.Module):
     def loss(self, batch_x, batch_y):
         """
         Calculate ELBO approximation of log likelihood for given batch with negative sign.
-        Args: 
+        Args:
             batch_x: FloatTensor - the matrix of shape batch_size x input_dim.
             batch_y: FloatTensor - dont uses parameter in this model.
 
-        Returns: 
+        Returns:
             Tensor - scalar, ELBO approximation of log likelihood for given batch with negative sign.
-        
+
         Example:
             >>>
         """
@@ -166,10 +166,10 @@ class VAE(nn.Module):
     def generate_samples(self, num_samples):
         """
         Generate samples of object x from noises in latent space.
-        Args: 
+        Args:
             num_samples: int - the number of samples, witch need to generate.
 
-        Returns: 
+        Returns:
             Tensor - the matrix of shape num_samples x input_dim.
 
         Example:
@@ -181,21 +181,21 @@ class VAE(nn.Module):
 
         distr_x = self.q_x(z).view([num_samples, -1])
 
-        return torch.bernoulli(distr_x, device = self.device)
+        return torch.bernoulli(distr_x, device=self.device)
 
     @staticmethod
     def log_pdf_normal(distr, samples):
         """
         The function calculates the logarithm of the probability density at a point relative to the corresponding normal distribution given componentwise by its mean and standard deviation.
-        Args: 
+        Args:
             distr = (mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
-                mu:    Tensor - the matrix of shape batch_size x latent_dim.
+                mu: Tensor - the matrix of shape batch_size x latent_dim.
                 sigma: Tensor - the matrix of shape batch_size x latent_dim.
             samples: Tensor - the tensor of shape batch_size x num_samples x latent_dim, samples in latent space.
 
-        Returns: 
+        Returns:
             Tensor - the matrix of shape batch_size x num_samples, each element of which is the logarithm of the probability density of a point relative to the corresponding distribution.
-        
+
         Example:
             >>>
         """
@@ -215,13 +215,13 @@ class VAE(nn.Module):
     def log_likelihood(x_true, x_distr):
         """
         Calculate log likelihood between x_true and x_distr.
-        Args: 
+        Args:
             x_true:  Tensor - the matrix of shape batch_size x input_dim.
             x_distr: Tensor - the tensor of shape batch_size x num_samples x input_dim, Bernoulli distribution parameters.
 
-        Returns: 
+        Returns:
             Tensor - the matrix of shape batch_size x num_samples - log likelihood for each sample.
-        
+
         Example:
             >>>
         """
@@ -238,10 +238,10 @@ class VAE(nn.Module):
     @staticmethod
     def log_mean_exp(data):
         """
-        Args: 
+        Args:
             data: Tensor - the tensor of shape n_1 x n_2 x ... x n_K.
 
-        Returns: 
+        Returns:
             Tensor - the tensor of shape n_1 x n_2 x ,,, x n_{K - 1}.
 
         Example:
@@ -255,16 +255,16 @@ class VAE(nn.Module):
     def divergence_KL_normal(q_distr, p_distr):
         """
         Calculate KL-divergence KL(q||p) between n-pairs of normal distribution.
-        Args: 
+        Args:
             q_distr=(mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
-                mu:    Tensor - the matrix of shape batch_size x latent_dim.
+                mu: Tensor - the matrix of shape batch_size x latent_dim.
                 sigma: Tensor - the matrix of shape batch_size x latent_dim.
             p_distr=(mu, sigma): tuple(Tensor, Tensor) - the normal distribution parameters.
-                mu:    Tensor - the matrix of shape batch_size x latent_dim.
+                mu: Tensor - the matrix of shape batch_size x latent_dim.
                 sigma: Tensor - the matrix of shape batch_size x latent_dim.
-        Returns: 
+        Returns:
             Tensor - the vector of shape n, each value of which is a KL-divergence between pair of normal distribution.
-        
+
         Example:
             >>>
         """
@@ -291,12 +291,12 @@ class IWAE(VAE):
             device='cpu'):
         """
         Standart model of IWAE.
-        Args: 
-            latent_dim:     int     - the dimension of latent space.
-            input_dim:      int     - the dimension of input space.
-            K:              int     - the rang of Lower Bound.
-            device:         string  - the type of computing device: 'cpu' or 'gpu'.
-            hidden_dim:     int     - the size of hidden_dim neural layer.
+        Args:
+            latent_dim: int - the dimension of latent space.
+            input_dim: int - the dimension of input space.
+            K: int     - the rang of Lower Bound.
+            device: string - the type of computing device: 'cpu' or 'gpu'.
+            hidden_dim: int - the size of hidden_dim neural layer.
 
         Returns:
             None
@@ -316,10 +316,10 @@ class IWAE(VAE):
         Args:
             z: FloatTensor - the matrix of shape 1 x latent_dim.
             batch_x: FloatTensor - the matrix of shape batch_size_x x input_dim.
-        
+
         Returns:
             FloatTensor - matrix of shape batch_size_x x 1.
-        
+
         Example:
             >>>
         """
@@ -328,7 +328,7 @@ class IWAE(VAE):
 
         propos_distr = self.q_z(batch_x)
         pri_distr = self.p_z(batch_x.shape[0])
-        
+
         z_latent = self.sample_z(propos_distr, self.K)
         z_latent[:, 0, :] = z
 
@@ -340,64 +340,66 @@ class IWAE(VAE):
 
         normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
-        exponent = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
+        exponent = log_likelihood_true_distr + \
+            normal_log_pdf_prior - normal_log_pdf_propos
 
         expectation = self.log_mean_exp(exponent)
 
-        log_weight = log_likelihood_true_distr + normal_log_pdf_prior - expectation.view(-1, 1)
-        
+        log_weight = log_likelihood_true_distr + \
+            normal_log_pdf_prior - expectation.view(-1, 1)
+
         proba = torch.exp(log_weight)
-        
+
         return proba[:, :1]
 
     def sample_z_IW(self, batch_x, num_samples=1):
         """
         Generates samples z from q_IW(z|x).
-        Args: 
+        Args:
             batch_x: FloatTensor - the matrix of shape 1 x input_dim.
             num_samples: int - the number of samples for each element.
 
-        Returns: 
+        Returns:
             Tensor - the tensor of shape 1 x 1 x latent_dim - samples from normal distribution in latent space.
-        
+
         Example:
             >>>
         """
         batch_x = batch_x.to(self.device)
         pri_distr = self.p_z(batch_x.shape[0])
         propos_distr = self.q_z(batch_x)
-       
+
         z_latent = self.sample_z(propos_distr, self.K)
-        
+
         x_distr = self.q_x(z_latent)
-        
+
         log_likelihood_true_distr = self.log_likelihood(batch_x, x_distr)
 
         normal_log_pdf_prior = self.log_pdf_normal(pri_distr, z_latent)
 
         normal_log_pdf_propos = self.log_pdf_normal(propos_distr, z_latent)
 
-        log_weight = log_likelihood_true_distr + normal_log_pdf_prior - normal_log_pdf_propos
+        log_weight = log_likelihood_true_distr + \
+            normal_log_pdf_prior - normal_log_pdf_propos
 
-        weight = torch.softmax(log_weight, dim = 1)
+        weight = torch.softmax(log_weight, dim=1)
 
         cat = torch.distributions.Categorical(weight)
-        
+
         indexes = cat.sample((1,))
 
         return z_latent[:, indexes, :][0]
 
-
     def loss(self, batch_x, batch_y):
         """
         Calculate k-sample lower bound approximation of log likelihood for given batch with negative sign.
-        Args: 
+        Args:
             batch_x: FloatTensor - the matrix of shape batch_size x input_dim.
             batch_y: FloatTensor - dont uses parameter in this model.
 
-        Returns: 
+        Returns:
             Tensor - scalar, k-sample lower bound approximation of log likelihood for given batch with negative sign.
-       
+
         Example:
             >>>
         """
@@ -420,8 +422,3 @@ class IWAE(VAE):
         expectation = torch.mean(self.log_mean_exp(exponent), dim=0)
 
         return -1 * torch.mean(expectation, dim=0)
-
-
-
-
-
