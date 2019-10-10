@@ -14,7 +14,7 @@
 
 ## Add new model
 1. File *.py with model move to ./src/DeepGenerativeModels/
-2. Write to the file requirements.txt all the dependencies that are used in your part of the library
+2. Write to the file requirements.txt all dependencies that are used in your part of the library
 3. File ipynb with experiments move to ./examples
 
 ## Version
