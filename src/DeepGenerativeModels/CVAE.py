@@ -45,6 +45,7 @@ class VAE(nn.Module):
 
         self.latent_size = latent_size
         self.conditional = conditional
+        self.num_labels = num_labels
         self.encoder = Encoder(encoder_layer_sizes, latent_size, conditional, num_labels)
         self.decoder = Decoder(decoder_layer_sizes, latent_size, conditional, num_labels)
 
@@ -91,6 +92,7 @@ class Encoder(nn.Module):
         :param num_labels: int, number of possible labels
         """
         super().__init__()
+        self.num_labels = num_labels
         self.conditional = conditional
         if self.conditional:
             layer_sizes[0] += num_labels
@@ -111,7 +113,7 @@ class Encoder(nn.Module):
         :return: parameters of distribution for latent space
         """
         if self.conditional:
-            cond = idx2onehot(cond, num_labels=10)
+            cond = idx2onehot(cond, num_labels=self.num_labels)
             x = torch.cat((x, cond), dim=-1)
 
         x = self.MLP(x)
@@ -131,6 +133,7 @@ class Decoder(nn.Module):
         :param num_labels: int, 0 for VAE, positive for CVAE
         """
         super().__init__()
+        self.num_labels = num_labels
         self.MLP = nn.Sequential()
         self.conditional = conditional
         if self.conditional:
@@ -153,7 +156,7 @@ class Decoder(nn.Module):
         :return: reconstructed image 28x28
         """
         if self.conditional:
-            cond = idx2onehot(cond, num_labels=10)
+            cond = idx2onehot(cond, num_labels=self.num_labels)
             z = torch.cat((z, cond), dim=-1)
         x = self.MLP(z)
         return x
@@ -172,7 +175,7 @@ def loss_VAE(recon_x, x, mean, log_var):
     return (BCE + KLD) / x.size(0)
 
 
-def train_VAE(vae, device, data_loader, loss_fn=loss_VAE, freq_print=100, learning_rate=0.001, epochs=50):
+def train_VAE(vae, device, data_loader, loss_fn=loss_VAE, verbose=True, freq_print=100, learning_rate=0.001, epochs=50):
     """
     Trains VAE instance
     :param vae: instance to train
@@ -201,8 +204,9 @@ def train_VAE(vae, device, data_loader, loss_fn=loss_VAE, freq_print=100, learni
             logs['loss'].append(loss.item())
 
             if iteration % freq_print == 0 or iteration == len(data_loader) - 1:
-                print("Epoch {:02d}/{:02d} Batch {:04d}/{:d}, Loss {:9.4f}".format(
-                    epoch, epochs, iteration, len(data_loader) - 1, loss.item()))
+                if verbose:
+                    print("Epoch {:02d}/{:02d} Batch {:04d}/{:d}, Loss {:9.4f}".format(
+                        epoch, epochs, iteration, len(data_loader) - 1, loss.item()))
 
                 if vae.conditional:
                     conds = torch.arange(0, 10).long().unsqueeze(1)
