@@ -330,7 +330,7 @@ class IWAE(VAE):
 
 
 class FlowVAE(VAE):
-    def __init__(self, latent_dim, input_dim, hidden_dim=200, device='cpu'):
+    def __init__(self, latent_dim, input_dim, flows_number, hidden_dim=200, device='cpu'):
         """
         Standart model of VAE with ELBO optimization.
         Input: latent_dim,  int     - the dimension of latent space.
@@ -343,7 +343,8 @@ class FlowVAE(VAE):
         self.input_dim = input_dim
         self.hidden_dim = hidden_dim
         self.device = device
-        self.flow = RealNVP(dim=latent_dim)
+        self.flows_number = flows_number
+        self.flows = nn.ModuleList([RealNVP(dim=latent_dim) for i in range(flows_number)])
         self.proposal_z = nn.Sequential(
             nn.Linear(self.input_dim, hidden_dim),
             nn.LeakyReLU(),
@@ -377,7 +378,7 @@ class FlowVAE(VAE):
         pri_distr = self.p_z(batch_size)
         z = self.sample_z(propos_distr).view(-1, self.latent_dim)
         
-        zk, log_det = self.flow(z)
+        zk, log_det = self.apply_flows(z)
         x_distr = self.q_x(zk)
 
         expectation = torch.mean(
@@ -388,8 +389,25 @@ class FlowVAE(VAE):
         divergence = self.divergence_KL_normal(propos_distr, pri_distr)
 
         return -1 * torch.mean(expectation - divergence - log_det, dim=0)
+                                   
     
-    
+    def apply_flows(self, z):
+        """
+        Return the output of sequence of flows
+        Input: z, FloatTensor - the matrix of shape batch_size x latent_dim.
+        
+        Return: FloatTensor - matrix of shape batch_size x latent_dim.
+        """     
+        log_det = 0.
+        for i, flow in enumerate(self.flows):
+            if i == 0:
+                zk, log_det_k = flow(z)
+            else:
+                zk, log_det_k = flow(zk)
+            log_det = log_det + log_det_k
+        return zk, log_det
+                                   
+                                   
     def posterior_z(self, z, x):
         """
         Return margin distribution of Z
@@ -399,14 +417,14 @@ class FlowVAE(VAE):
         Return: FloatTensor - matrix of shape 1 x batch_size_x.
         """
         z = z.to(self.device)
-        zk, log_det = self.flow(z)
+        zk, log_det = self.apply_flows(z)
         x = x.to(self.device)
 
         mu, sigma = self.q_z(x)
         
         mn = torch.distributions.MultivariateNormal(mu, covariance_matrix=torch.eye(sigma.shape[-1])*(sigma))
-        log_proba = mn.log_prob(z) - log_det        
-        return torch.exp(log_proba)
+        log_proba = mn.log_prob(z) - log_det    
+        return log_proba
 
 
     def generate_samples(self, num_samples):
@@ -419,7 +437,7 @@ class FlowVAE(VAE):
         distr_z = self.p_z(num_samples=1)
 
         z = self.sample_z(distr, num_samples=num_samples)
-        z, _ = self.flow(z)
+        z, _ = self.apply_flows(z)
 
         distr_x = self.q_x(z).view([num_samples, -1])
 
